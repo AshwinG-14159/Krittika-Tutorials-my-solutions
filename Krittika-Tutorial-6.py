@@ -1,11 +1,27 @@
 #tut6 q1
+
+'''
+This tutorial covers some basic concepts of web scraping. i.e accessing a webpage using python and extracting its data. 
+
+Given: wikipedia page of constellations("https://en.wikipedia.org/wiki/Lists_of_stars_by_constellation") and of 
+moons and planets("https://en.wikipedia.org/wiki/List_of_natural_satellites").
+
+Task:
+1) Parse this webpage for the RA and Dec of stars of each constellation, convert these coordinates to Cartesian coordinates 
+and store them by constellation and plot them using matplotlib.
+
+2)Try to recreate the 'Moons_and_planets.csv' file(used in the first tutorial) from this webpage. You can take inspiration from 
+how tables are scraped in the get_map() function for Task 1. Do remember to remove commas and uncertainties in the radius measurement.
+'''
+
 import requests
 import numpy as np
 from bs4 import BeautifulSoup
 import matplotlib.pyplot as plt
+#imports
 
 
-def get_coords(ra_s, dec_s):
+def get_coords(ra_s, dec_s):  # returns right ascencsion and declination given ra and dec in string format.
     h_ind = ra_s.find('h')
     m_ind = ra_s.find('m')
     s_ind = ra_s.find('s')    
@@ -14,7 +30,7 @@ def get_coords(ra_s, dec_s):
     s = float(ra_s[(m_ind+1):s_ind])
     ra = h + m/60 + s/3600
     if dec_s[0] == '+':
-        sign = 1
+        sign = 1                #check for positive and negative sign
     else:
         sign = -1
     d_ind = dec_s.find('°')
@@ -27,7 +43,7 @@ def get_coords(ra_s, dec_s):
     return ra, dec
 
 
-def get_map(constellation):
+def get_map(constellation):     #returns stars data for a constellations given a constellation. Returns arrays for names, positions, magnitudes
     url = f'https://en.wikipedia.org/wiki/List_of_stars_in_{constellation}' #page gets downloaded according to constellation
     r = requests.get(url)
 
@@ -53,6 +69,8 @@ def get_map(constellation):
                                   
     mag_ind = heads.index('abs.mag.')
     
+    #  indices of all the main data points are stored
+        
     name = []
     ra = []
     dec = []
@@ -87,7 +105,7 @@ def get_map(constellation):
 
     
     
-def get_const_data():
+def get_const_data(): #get data for all constellations into a big list
     page = requests.get("https://en.wikipedia.org/wiki/Lists_of_stars_by_constellation")
     space_soup = BeautifulSoup(page.content, 'html.parser')
 #print(space_soup.prettify())
@@ -96,7 +114,7 @@ def get_const_data():
     
     big_list = []
     
-    for i in items:
+    for i in items:   #iterate over all given constellation names and find their data. Add it to the big list
         print(i.get_text())
         name_list,ra_list,dec_list,mag_list = get_map(i.get_text())
         big_list.append([i.get_text(),name_list,ra_list,dec_list,mag_list])
@@ -121,9 +139,10 @@ def process_data(big_list):
         star_names,star_ra,star_dec,star_mag = np.array(star_names),np.array(star_ra),np.array(star_dec),np.array(star_mag)
         term = [i[0],star_names,star_ra,star_dec,star_mag]
         big_list2.append(term)
-    return(big_list2)
+    return(big_list2)  # remove null values and get a processed big list. call it big_list2
 
-def project(ra, dec): # Stereographic Projection. 
+
+def project(ra, dec): # Stereographic Projection. Used spherical trigonometry
     theta = np.deg2rad(90-dec + dec.mean())
     phi = np.deg2rad((ra-ra.mean())*15)
     x = np.sin(theta)*np.cos(phi)
@@ -135,7 +154,7 @@ def project(ra, dec): # Stereographic Projection.
     
     
 
-def plot_const(const):
+def plot_const(const):  #plot contellations data with suitable scaling, resizing etc
     const_data = []
     for i in big_list2:
         if i[0] == const:
@@ -152,10 +171,14 @@ big_list = get_const_data()
 big_list2 = process_data(big_list)
 for i in big_list2:
     x,y = project(i[2],i[3])
-    i[2], i[3] = x,y
+    i[2], i[3] = x,y 
+
+#main code
+
 
 const = input("constellation: ")
 plot_const(const)
+
 
 '''    
 End of Q1
@@ -163,6 +186,7 @@ End of Q1
 Q2 ahead
 
 '''
+
 
 #tut6 q2
 
@@ -179,24 +203,26 @@ for i in planets_t.find_all('tr'):
         value = j.get_text()
         value = value.replace(',','')
         row.append(value)
-    planets_d.append(row)
+    planets_d.append(row)    #get planet data into list planets_d
 
 heads = []
 for i in planets_t.find_all('tr')[:1]:
     for j in i.find_all('th'):             #'th' tag stands for header cell
-        heads.append(j.get_text().strip('\n'))        
+        heads.append(j.get_text().strip('\n'))        #get header data into list heads
 
 index_name_moon = heads.index('Name')
 index_name_planet = heads.index('Parent')
 index_radius = heads.index('Mean radius (km)')
+
+#get important quantities
 
 csv_data = ["Name of moon","Name of planet","Mean radius(km)"]
 for i in planets_d:
     if len(i) !=0:
         name_moon,name_planet,radius = i[index_name_moon],i[index_name_planet],i[index_radius]
         radius = radius.split('±')[0]
-        radius = radius.strip('≈')
-        diameter = float(radius) * 2
+        radius = radius.strip('≈') 
+        diameter = float(radius) * 2                #process data so as to remove datapoints that arent needed
         csv_data.append([name_moon,name_planet,diameter])
 print(csv_data)
 
